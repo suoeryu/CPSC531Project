@@ -1,1 +1,4 @@
 Flask
+cassandra-driver
+pandas
+matplotlib

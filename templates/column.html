@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ col_name }}</title>
+</head>
+<body>
+<h1>
+    <a href="{{ url_for('view_data_set', name=table_name) }}"> {{ table_name }} </a>
+    -> {{ col_name }}
+</h1>
+{% if col_info.col_type == 'DOUBLE' %}
+    {{ col_info.min_val }} <br/>
+    {{ col_info.max_val }} <br/>
+    {{ col_info.mean_val }} <br/>
+{% else %}
+{% endif %}
+
+{% for img in images %}
+    <img src="{{ url_for('static', filename='images/'+img.fig_name+'.png') }}"/>
+{% endfor %}
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <ul class=flashes>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
+<form method="post" action="{{ url_for('add_figure') }}">
+    <input name="table_name" type="hidden" value="{{ table_name }}"/>
+    <input name="col_name" type="hidden" value="{{ col_name }}"/>
+    <input name="fig_title" type="text"/>
+    <select name="fig_type">
+        <option value="hist">HISTOGRAM</option>
+        <option value="plot">PLOT</option>
+    </select>
+    <select name="rel_column">
+        {% for col in col_infos %}
+            {% if col.col_type == 'DOUBLE' %}
+                <option value="{{ col.col_name }}">{{ col.col_name }}</option>
+            {% endif %}
+        {% endfor %}
+    </select>
+    <input name="fit_param" type="text"/>
+    <input type="submit" value="ADD"/>
+</form>
+</body>
+</html>

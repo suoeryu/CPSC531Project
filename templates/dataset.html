@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>{{ table_name }}</h1>
+{% for info in col_infos %}
+    <a href="{{ url_for('view_column', table_name=table_name, col_name=info.col_name) }}">{{ info.col_name }}</a>
+    {{ info.col_type }}
+    {{ info.max_val }}
+    {{ info.min_val }}
+    {{ info.mean_val }}
+    <br/>
+{% endfor %}
+</body>
+</html>

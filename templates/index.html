@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ML Data Preparing System</title>
+</head>
+<body>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <ul class=flashes>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
+<h1>Data Sets</h1>
+{% for d in datasets %}
+    <a href="{{ url_for('view_data_set', name=d.orig_table) }}"> {{ d.orig_table }} </a>
+    {{ d.target_table }}
+    {{ d.create_time }} <a href="{{ url_for('delete_data_set', name=d.orig_table) }}">Delete</a>
+    <br/>
+{% endfor %}
+
+<a href="{{ url_for('upload_csv') }}">Upload DataSet</a>
+</body>
+</html>

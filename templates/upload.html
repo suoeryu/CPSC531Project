@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Data</title>
+</head>
+<body>
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+<form method="post" enctype="multipart/form-data" action="{{ url_for('upload_csv') }}">
+    <input type="text" name="DataSetName"/>
+    <input type="file" name="csv_file"/>
+    <input type="submit" value="Upload"/>
+</form>
+</body>
+</html>
