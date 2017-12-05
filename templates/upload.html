@@ -44,18 +44,33 @@
 </head>
 <body>
 {% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <ul class=flashes>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
+    {% if messages %}
+        <ul class=flashes>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 {% endwith %}
-<form method="post" enctype="multipart/form-data" action="{{ url_for('upload_csv') }}">
-    <input type="text" name="DataSetName"/>
-    <input type="file" name="csv_file"/>
-    <input type="submit" value="Upload"/>
-</form>
+<div class="container">
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('upload_csv') }}">
+        <table>
+            <tr>
+                <td><label><b>Data Set Name</b></label></td>
+                <td><input type="text" name="DataSetName" required/></td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <input type="file" name="csv_file"/>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                <input type="submit" value="Upload"/>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
 </body>
 </html>

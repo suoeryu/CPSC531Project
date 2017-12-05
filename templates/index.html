@@ -101,7 +101,7 @@
                     <div class="service">
                         <i class="fa fa-file"></i>
                         <h3><a href="{{ url_for('view_data_set', name=d.orig_table) }}"> {{ d.orig_table }} </a></h3>
-                        <h3>{{ d.target_table }}</h3>
+                        <h3><a href="{{ url_for('view_data_set', name=d.target_table) }}"> {{ d.target_table }} </a></h3>
                         <p>Uploaded at {{ d.create_time }}</p>
                         <a href="{{ url_for('delete_data_set', name=d.orig_table) }}">Delete</a>
                     </div>

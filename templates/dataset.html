@@ -47,6 +47,7 @@
         <div class="row">
             <div class="section-header text-center">
                 <h2 class="title">{{ table_name }}</h2>
+                <a href="{{ url_for('index') }}">return to index</a>
             </div>
 
             {% for info in col_infos %}
@@ -60,9 +61,22 @@
                             </a>
                         </h3>
                         <p>Type: {{ info.col_type }}</p>
-                        <p>Max : {{ info.max_val }} </p>
-                        <p>Min: {{ info.min_val }} </p>
-                        <p>Mean: {{ info.mean_val }} </p>
+                        {% if info.col_type == 'DOUBLE' %}
+                            <table>
+                                <tr>
+                                    <td>Max Value:</td>
+                                    <td align="right">{{ info.max_val }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Min Value:</td>
+                                    <td align="right">{{ info.min_val }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Mean Value:</td>
+                                    <td>{{ info.mean_val }}</td>
+                                </tr>
+                            </table>
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}

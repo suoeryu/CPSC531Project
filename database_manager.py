@@ -45,7 +45,8 @@ def init_database():
     )
     session.execute(
         '''CREATE TABLE DATASETINFO(table_name text, col_name text, col_type text,
-                                     min_val double, max_val double, mean_val double,
+                                    min_val double, max_val double, mean_val double,
+                                    str_vals set<text>,
                                      PRIMARY KEY(table_name, col_name))'''
     )
     session.execute(
@@ -53,6 +54,8 @@ def init_database():
                                fig_title text, create_time timestamp,
                                PRIMARY KEY(fig_name, table_name, col_name))'''
     )
+    session.execute('''CREATE TABLE RULES(table_name text, col_name text, operation list<text>,
+                                          PRIMARY KEY(table_name, col_name))''')
 
 
 def add_dataset(name, csv_file):
@@ -70,28 +73,37 @@ def add_dataset(name, csv_file):
     insert_data = session.prepare(
         'INSERT INTO {} (idx,{}) VALUES (?,{})'.format(name, ','.join(info.columns),
                                                        ','.join(['?'] * len(info.columns))))
-    batch = BatchStatement(consistency_level=ConsistencyLevel.QUORUM)
+    insert_target = session.prepare('INSERT INTO {}(idx) VALUES (?)'.format(name + '_TARGET'))
+    data_batch = BatchStatement(consistency_level=ConsistencyLevel.QUORUM)
+    target_batch = BatchStatement(consistency_level=ConsistencyLevel.QUORUM)
     for idx, row in info.iterrows():
         values = list(row.values)
         values.insert(0, idx)
-        batch.add(insert_data, tuple(values))
+        data_batch.add(insert_data, tuple(values))
+        target_batch.add(insert_target, (idx,))
         if (idx + 1) % 20 == 0:
-            session.execute(batch)
-            batch.clear()
-    session.execute(batch)
+            session.execute(data_batch)
+            data_batch.clear()
+    session.execute(data_batch)
+    session.execute(target_batch)
     insert_col_info = session.prepare(
-        '''INSERT INTO DATASETINFO (table_name, col_name, col_type, min_val, max_val, mean_val)
-                            VALUES (?,          ?,        ?,        ?,       ?,       ?)'''
+        '''INSERT INTO DATASETINFO (table_name, col_name, col_type,
+                                    min_val, max_val, mean_val, str_vals)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)'''
     )
-    batch = BatchStatement(consistency_level=ConsistencyLevel.QUORUM)
+    data_batch = BatchStatement(consistency_level=ConsistencyLevel.QUORUM)
     for col_name, col_type in zip(info.columns, info.dtypes):
         col_data = info[col_name]
         if col_type == float:
-            batch.add(insert_col_info,
-                      (name, col_name, 'DOUBLE', col_data.min(), col_data.max(), col_data.mean()))
+            data_batch.add(insert_col_info,
+                           (name, col_name, 'DOUBLE',
+                            col_data.min(), col_data.max(), col_data.mean(),
+                            None))
         else:
-            batch.add(insert_col_info, (name, col_name, 'STRING', None, None, None))
-    session.execute(batch)
+            data_batch.add(insert_col_info, (name, col_name, 'STRING',
+                                             None, None, None,
+                                             set(col_data)))
+    session.execute(data_batch)
     return info
 
 
@@ -110,9 +122,11 @@ def get_data_sets():
 
 def delete_data_set(name):
     sess = get_session()
-    sess.execute("DELETE from DATASETS where orig_table = %s", [name])
     sess.execute('DROP TABLE IF EXISTS {}'.format(name))
     sess.execute('DROP TABLE IF EXISTS {}_TARGET'.format(name))
+    sess.execute("DELETE from DATASETS where orig_table = %s", [name])
+    sess.execute('DELETE FROM DATASETINFO WHERE table_name = %s', (name,))
+    sess.execute('DELETE FROM DATASETINFO WHERE table_name = %s', (name + '_TARGET',))
     return None
 
 
@@ -129,17 +143,25 @@ def get_col_infos(table_name):
 def get_col_info(table_name, col_name):
     sess = get_session()
     rows = sess.execute(
-        '''SELECT col_type, min_val, max_val, mean_val
+        '''SELECT col_type, min_val, max_val, mean_val, str_vals
               FROM DATASETINFO
            WHERE TABLE_NAME = %s and COL_NAME = %s''',
         [table_name, col_name])
-    return rows[0]
+    rows = list(rows)
+    return rows[0] if rows else None
 
 
 def get_col_values(table_name, col_name):
     sess = get_session()
     rows = sess.execute('SELECT {} FROM {}'.format(col_name, table_name))
     return [row[0] for row in rows]
+
+
+def get_col_values_with_index(table_name, col_name):
+    sess = get_session()
+    sess.row_factory = tuple_factory
+    rows = sess.execute('SELECT idx,{} FROM {}'.format(col_name, table_name))
+    return list(rows)
 
 
 def insert_image(fig_name, table_name, col_name, fig_title):
@@ -156,3 +178,49 @@ def get_all_images(table_name, col_name):
                              WHERE table_name = %s and col_name = %s ALLOW FILTERING''',
                         [table_name, col_name])
     return list(rows)
+
+
+def delete_image(name):
+    sess = get_session()
+    sess.execute('DELETE FROM IMAGES WHERE fig_name=%s', [name])
+    return None
+
+
+def get_operation(table_name, col_name):
+    sess = get_session()
+    sess.row_factory = tuple_factory
+    rows = sess.execute("SELECT operation FROM RULES where table_name = %s and col_name = %s",
+                        [table_name, col_name])
+    return list(rows)
+
+
+def add_target_column(table_name, col_name):
+    col_info = get_col_info(table_name, col_name)
+    sess = get_session()
+    sess.execute("ALTER TABLE {} ADD ({} double)".format(table_name + "_target", col_name))
+    update_col = sess.prepare(
+        '''UPDATE {} SET {}=? WHERE idx=?'''.format(table_name + '_target', col_name)
+    )
+    batch = BatchStatement(consistency_level=ConsistencyLevel.QUORUM)
+    counter = 0
+    for idx, value in get_col_values_with_index(table_name, col_name):
+        batch.add(update_col, (value, idx))
+        counter += 1
+        if counter % 1000 == 0:
+            sess.execute(batch)
+            batch.clear()
+    sess.execute(batch)
+    sess.execute('''INSERT INTO DATASETINFO (table_name, col_name, col_type,
+                                min_val, max_val, mean_val)
+                        VALUES (%s, %s, 'DOUBLE', %s, %s, %s)''',
+                 [(table_name + '_target').upper(), col_name,
+                  col_info.min_val, col_info.max_val, col_info.mean_val])
+    return None
+
+
+def del_target_column(table_name, col_name):
+    sess = get_session()
+    sess.execute("ALTER TABLE {} DROP {}".format(table_name, col_name))
+    sess.execute('DELETE FROM DATASETINFO WHERE table_name = %s and col_name = %s',
+                 (table_name, col_name))
+    return None

@@ -48,20 +48,38 @@
             <div class="section-header text-center">
                 <h2 class="title">
                     <a href="{{ url_for('view_data_set', name=table_name) }}"> {{ table_name }} </a>
-                    -> {{ col_name }}
-                </h2>
+                    &gt; {{ col_name }} </h2>
                 {% if col_info.col_type == 'DOUBLE' %}
                     <p>Min: {{ col_info.min_val }}</p>
                     <p>Max: {{ col_info.max_val }}</p>
                     <p>Mean: {{ col_info.mean_val }}</p>
                 {% else %}
+                    {% for v in col_info.str_vals %}
+                        <p>{{ v }}</p>
+                    {% endfor %}
+                {% endif %}
+                {% if table_name.lower().endswith('_target') %}
+                    <a href="{{ url_for('del_target_column', table_name=table_name, col_name=col_name) }}">
+                        Remove from target table</a>
+                {% elif not target_col_info %}
+                    <a href="{{ url_for('add_target_column', table_name=table_name, col_name=col_name) }}">
+                        Add column to target table</a>
+                {% else %}
+                    <a href="{{ url_for('view_column', table_name=table_name+'_TARGET', col_name=col_name) }}">
+                        Target Column</a>
                 {% endif %}
             </div>
 
             {% for img in images %}
-                <div class="col-md-9 col-sm-6">
+                <div class="col-md-6 col-sm-6">
                     <div class="service">
-                        <img src="{{ url_for('static', filename='images/'+img.fig_name+'.png') }}"/>
+                        <h3>{{ img.fig_title }}</h3>
+                        <img width="100%"
+                             src="{{ url_for('static', filename='images/'+img.fig_name+'.png') }}"/>
+                        <button class="main-btn"
+                                onclick="location.href='{{ url_for('del_figure', name=img.fig_name, tn=table_name, cn=col_name) }}';">
+                            Delete
+                        </button>
                     </div>
                 </div>
             {% endfor %}
@@ -78,23 +96,43 @@
         </ul>
     {% endif %}
 {% endwith %}
-<form method="post" action="{{ url_for('add_figure') }}">
-    <input name="table_name" type="hidden" value="{{ table_name }}"/>
-    <input name="col_name" type="hidden" value="{{ col_name }}"/>
-    <input name="fig_title" type="text"/>
-    <select name="fig_type">
-        <option value="hist">HISTOGRAM</option>
-        <option value="plot">PLOT</option>
-    </select>
-    <select name="rel_column">
-        {% for col in col_infos %}
-            {% if col.col_type == 'DOUBLE' %}
-                <option value="{{ col.col_name }}">{{ col.col_name }}</option>
-            {% endif %}
-        {% endfor %}
-    </select>
-    <input name="fit_param" type="text"/>
-    <input type="submit" value="ADD"/>
-</form>
+<div class="container">
+    <div class="section-header text-center">
+        <form method="post" action="{{ url_for('add_figure') }}">
+            <input name="table_name" type="hidden" value="{{ table_name }}"/>
+            <input name="col_name" type="hidden" value="{{ col_name }}"/>
+            <table>
+                <tr>
+                    <td><label>Title:</label></td>
+                    <td><input name="fig_title" type="text" required/></td>
+                </tr>
+                <tr>
+                    <td>
+                        <select name="fig_type">
+                            <option value="hist">HISTOGRAM</option>
+                            <option value="plot">PLOT</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select name="rel_column">
+                            {% for col in col_infos %}
+                                {% if col.col_type == 'DOUBLE' %}
+                                    <option value="{{ col.col_name }}">{{ col.col_name }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label>Parameter</label></td>
+                    <td><input name="fig_param" type="text"/></td>
+                </tr>
+                <tr>
+                    <td colspan="2"><input type="submit" value="ADD"/></td>
+                </tr>
+            </table>
+        </form>
+    </div>
+</div>
 </body>
 </html>
