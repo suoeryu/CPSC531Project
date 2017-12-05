@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pandas as pd
 from cassandra.query import tuple_factory, BatchStatement
+from pytz import timezone
 
 cluster = Cluster(['database'])
 keyspace = 'cpsc531'

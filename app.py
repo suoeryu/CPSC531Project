@@ -100,6 +100,12 @@ def add_figure():
     return redirect(url_for('view_column', table_name=table_name, col_name=col_name))
 
 
+@app.route('/del_figure/<name>')
+def del_figure(name):
+    dm.delete_image(name)
+    os.remove(os.path.join('static/images', name+'.png'))
+
+
 if __name__ == '__main__':
     app.secret_key = 'super secret key'
     app.config['SESSION_TYPE'] = 'filesystem'

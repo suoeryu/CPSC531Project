@@ -1,18 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+
+    <title>{{ table_name }}</title>
+
+    <!-- Google font -->
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700%7CVarela+Round"
+          rel="stylesheet">
+
+    <!-- Bootstrap -->
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/bootstrap.min.css') }}"/>
+
+    <!-- Owl Carousel -->
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/owl.carousel.css') }}"/>
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/owl.theme.default.css') }}"/>
+
+    <!-- Magnific Popup -->
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/magnific-popup.css') }}"/>
+
+    <!-- Font Awesome Icon -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+
+    <!-- Custom stlylesheet -->
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}"/>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+		<script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+		<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+	<![endif]-->
+
 </head>
 <body>
-<h1>{{ table_name }}</h1>
-{% for info in col_infos %}
-    <a href="{{ url_for('view_column', table_name=table_name, col_name=info.col_name) }}">{{ info.col_name }}</a>
-    {{ info.col_type }}
-    {{ info.max_val }}
-    {{ info.min_val }}
-    {{ info.mean_val }}
-    <br/>
-{% endfor %}
+<div id="numbers" class="section sm-padding">
+    <div class="container">
+        <div class="row">
+            <div class="section-header text-center">
+                <h2 class="title">{{ table_name }}</h2>
+            </div>
+
+            {% for info in col_infos %}
+                <!-- column -->
+                <div class="col-md-4 col-sm-6">
+                    <div class="service">
+                        <i class="fa fa-pencil"></i>
+                        <h3>
+                            <a href="{{ url_for('view_column', table_name=table_name, col_name=info.col_name) }}">
+                                {{ info.col_name }}
+                            </a>
+                        </h3>
+                        <p>Type: {{ info.col_type }}</p>
+                        <p>Max : {{ info.max_val }} </p>
+                        <p>Min: {{ info.min_val }} </p>
+                        <p>Mean: {{ info.mean_val }} </p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
 </body>
 </html>

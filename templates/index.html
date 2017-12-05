@@ -2,7 +2,45 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ML Data Preparing System</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+
+    <title>CPSC 531 Final Project</title>
+    {#    <title>ML Data Preparing System</title>#}
+
+    <!-- Google font -->
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700%7CVarela+Round"
+          rel="stylesheet">
+
+    <!-- Bootstrap -->
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/bootstrap.min.css') }}"/>
+
+    <!-- Owl Carousel -->
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/owl.carousel.css') }}"/>
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/owl.theme.default.css') }}"/>
+
+    <!-- Magnific Popup -->
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/magnific-popup.css') }}"/>
+
+    <!-- Font Awesome Icon -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+
+    <!-- Custom stlylesheet -->
+    <link type="text/css" rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}"/>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+		<script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+		<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+	<![endif]-->
+
 </head>
 <body>
 {% with messages = get_flashed_messages() %}
@@ -14,14 +52,64 @@
         </ul>
     {% endif %}
 {% endwith %}
-<h1>Data Sets</h1>
-{% for d in datasets %}
-    <a href="{{ url_for('view_data_set', name=d.orig_table) }}"> {{ d.orig_table }} </a>
-    {{ d.target_table }}
-    {{ d.create_time }} <a href="{{ url_for('delete_data_set', name=d.orig_table) }}">Delete</a>
-    <br/>
-{% endfor %}
+<header id="home">
+    <!-- Background Image -->
+    <div class="bg-img"
+         style="background-image: url('{{ url_for('static', filename='img/background1.jpg') }}');">
+        <div class="overlay"></div>
+    </div>
+    <!-- /Background Image -->
 
-<a href="{{ url_for('upload_csv') }}">Upload DataSet</a>
+    <!-- home wrapper -->
+    <div class="home-wrapper">
+        <div class="container">
+            <div class="row">
+
+                <!-- home content -->
+                <div class="col-md-10 col-md-offset-1">
+                    <div class="home-content">
+                        <h1 class="white-text">Dataset Preparation System</h1>
+                        <h2 class="white-text">We Make Machine Learning Easier!
+                        </h2>
+                        <button class="main-btn"
+                                onclick="location.href='{{ url_for('upload_csv') }}';">Upload
+                            Dataset
+                        </button>
+                    </div>
+                </div>
+                <!-- /home content -->
+
+            </div>
+        </div>
+    </div>
+    <!-- /home wrapper -->
+</header>
+
+<div id="service" class="section md-padding">
+    <!-- Container -->
+    <div class="container">
+        <!-- Row -->
+        <div class="row">
+            <!-- Section header -->
+            <div class="section-header text-center">
+                <h2 class="title">Datasets</h2>
+            </div>
+            <!-- /Section header -->
+
+            {% for d in datasets %}
+                <div class="col-md-4 col-sm-6">
+                    <div class="service">
+                        <i class="fa fa-file"></i>
+                        <h3><a href="{{ url_for('view_data_set', name=d.orig_table) }}"> {{ d.orig_table }} </a></h3>
+                        <h3>{{ d.target_table }}</h3>
+                        <p>Uploaded at {{ d.create_time }}</p>
+                        <a href="{{ url_for('delete_data_set', name=d.orig_table) }}">Delete</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
