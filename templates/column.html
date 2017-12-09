@@ -53,6 +53,7 @@
                     <p>Min: {{ col_info.min_val }}</p>
                     <p>Max: {{ col_info.max_val }}</p>
                     <p>Mean: {{ col_info.mean_val }}</p>
+                    <p>NAN Count: {{ col_info.nan_count }}</p>
                 {% else %}
                     {% for v in col_info.str_vals %}
                         <p>{{ v }}</p>
@@ -62,8 +63,18 @@
                     <a href="{{ url_for('del_target_column', table_name=table_name, col_name=col_name) }}">
                         Remove from target table</a>
                 {% elif not target_col_info %}
-                    <a href="{{ url_for('add_target_column', table_name=table_name, col_name=col_name) }}">
-                        Add column to target table</a>
+                    <form method="post" action="{{ url_for('add_target_column', table_name=table_name, col_name=col_name) }}">
+                        {% if col_info.nan_count > 0 %}
+                            <select name="fill_na_method">
+                                <option value="zero">Fill NAN with 0</option>
+                                <option value="mean">Fill NAN with Mean</option>
+                                <option value="median">Fill NAN with Median</option>
+                                <option value="min">Fill NAN with Min</option>
+                                <option value="max">Fill NAN with Max</option>
+                            </select>
+                        {% endif %}
+                        <button type="submit">Add column to target table</button>
+                    </form>
                 {% else %}
                     <a href="{{ url_for('view_column', table_name=table_name+'_TARGET', col_name=col_name) }}">
                         Target Column</a>

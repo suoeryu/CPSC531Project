@@ -23,8 +23,9 @@ def index():
 @app.route('/init_database')
 def init_database():
     dm.init_database()
-    shutil.rmtree('static/images')
-    os.mkdir('static/images')
+    if os.path.exists('static/images'):
+        shutil.rmtree('static/images')
+        os.mkdir('static/images')
     return "<h1>Success to init database</h1>"
 
 
@@ -132,9 +133,10 @@ def del_figure(name):
         url_for('view_column', table_name=request.args.get('tn'), col_name=request.args.get('cn')))
 
 
-@app.route('/add_target_column/<table_name>/<col_name>')
+@app.route('/add_target_column/<table_name>/<col_name>', methods=['POST'])
 def add_target_column(table_name, col_name):
-    dm.add_target_column(table_name, col_name)
+    df = dm.add_target_column(table_name, col_name, request.form['fill_na_method'])
+    app.logger.debug(df)
     return redirect(url_for('view_column', table_name=table_name, col_name=col_name))
 
 

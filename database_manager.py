@@ -3,7 +3,7 @@ from cassandra.cluster import Cluster
 from datetime import datetime
 
 import pandas as pd
-from cassandra.query import tuple_factory, BatchStatement
+from cassandra.query import tuple_factory, BatchStatement, dict_factory
 from pytz import timezone
 
 cluster = Cluster(['database'])
@@ -46,7 +46,7 @@ def init_database():
     session.execute(
         '''CREATE TABLE DATASETINFO(table_name text, col_name text, col_type text,
                                     min_val double, max_val double, mean_val double,
-                                    str_vals set<text>,
+                                    nan_count int, str_vals set<text>,
                                      PRIMARY KEY(table_name, col_name))'''
     )
     session.execute(
@@ -88,8 +88,8 @@ def add_dataset(name, csv_file):
     session.execute(target_batch)
     insert_col_info = session.prepare(
         '''INSERT INTO DATASETINFO (table_name, col_name, col_type,
-                                    min_val, max_val, mean_val, str_vals)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)'''
+                                    min_val, max_val, mean_val, nan_count, str_vals)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
     )
     data_batch = BatchStatement(consistency_level=ConsistencyLevel.QUORUM)
     for col_name, col_type in zip(info.columns, info.dtypes):
@@ -97,11 +97,11 @@ def add_dataset(name, csv_file):
         if col_type == float:
             data_batch.add(insert_col_info,
                            (name, col_name, 'DOUBLE',
-                            col_data.min(), col_data.max(), col_data.mean(),
+                            col_data.min(), col_data.max(), col_data.mean(), col_data.isna().sum(),
                             None))
         else:
             data_batch.add(insert_col_info, (name, col_name, 'STRING',
-                                             None, None, None,
+                                             None, None, None, None,
                                              set(col_data)))
     session.execute(data_batch)
     return info
@@ -133,7 +133,7 @@ def delete_data_set(name):
 def get_col_infos(table_name):
     sess = get_session()
     rows = sess.execute(
-        '''SELECT col_name, col_type, min_val, max_val, mean_val
+        '''SELECT col_name, col_type, min_val, max_val, mean_val, nan_count
               FROM DATASETINFO
            WHERE TABLE_NAME = %s
         ''', [table_name])
@@ -143,7 +143,7 @@ def get_col_infos(table_name):
 def get_col_info(table_name, col_name):
     sess = get_session()
     rows = sess.execute(
-        '''SELECT col_type, min_val, max_val, mean_val, str_vals
+        '''SELECT col_type, min_val, max_val, mean_val, str_vals, nan_count
               FROM DATASETINFO
            WHERE TABLE_NAME = %s and COL_NAME = %s''',
         [table_name, col_name])
@@ -155,13 +155,6 @@ def get_col_values(table_name, col_name):
     sess = get_session()
     rows = sess.execute('SELECT {} FROM {}'.format(col_name, table_name))
     return [row[0] for row in rows]
-
-
-def get_col_values_with_index(table_name, col_name):
-    sess = get_session()
-    sess.row_factory = tuple_factory
-    rows = sess.execute('SELECT idx,{} FROM {}'.format(col_name, table_name))
-    return list(rows)
 
 
 def insert_image(fig_name, table_name, col_name, fig_title):
@@ -194,27 +187,42 @@ def get_operation(table_name, col_name):
     return list(rows)
 
 
-def add_target_column(table_name, col_name):
-    col_info = get_col_info(table_name, col_name)
+def add_target_column(table_name, col_name, fill_na_method):
     sess = get_session()
+    idx_list, value_list = [], []
+    for idx, value in sess.execute('SELECT idx,{} FROM {}'.format(col_name, table_name)):
+        idx_list.append(idx)
+        value_list.append(value)
+    df = pd.DataFrame({'idx': idx_list, col_name: value_list})
+    if fill_na_method == 'zero':
+        df[col_name] = df[col_name].fillna(0)
+    elif fill_na_method == 'mean':
+        df[col_name] = df[col_name].fillna(df[col_name].mean())
+    elif fill_na_method == 'median':
+        df[col_name] = df[col_name].fillna(df[col_name].median())
+    elif fill_na_method == 'min':
+        df[col_name] = df[col_name].fillna(df[col_name].min())
+    elif fill_na_method == 'max':
+        df[col_name] = df[col_name].fillna(df[col_name].max())
     sess.execute("ALTER TABLE {} ADD ({} double)".format(table_name + "_target", col_name))
     update_col = sess.prepare(
         '''UPDATE {} SET {}=? WHERE idx=?'''.format(table_name + '_target', col_name)
     )
     batch = BatchStatement(consistency_level=ConsistencyLevel.QUORUM)
     counter = 0
-    for idx, value in get_col_values_with_index(table_name, col_name):
-        batch.add(update_col, (value, idx))
+    for _, row in df.iterrows():
+        batch.add(update_col, (row[col_name], row['idx']))
         counter += 1
         if counter % 1000 == 0:
             sess.execute(batch)
             batch.clear()
     sess.execute(batch)
     sess.execute('''INSERT INTO DATASETINFO (table_name, col_name, col_type,
-                                min_val, max_val, mean_val)
-                        VALUES (%s, %s, 'DOUBLE', %s, %s, %s)''',
+                                min_val, max_val, mean_val, nan_count)
+                        VALUES (%s, %s, 'DOUBLE', %s, %s, %s, %s)''',
                  [(table_name + '_target').upper(), col_name,
-                  col_info.min_val, col_info.max_val, col_info.mean_val])
+                  df[col_name].min(), df[col_name].max(), df[col_name].mean(),
+                  df[col_name].isna().sum()])
     return None
 
 
